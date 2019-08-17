@@ -25,12 +25,13 @@ def estep(X: np.ndarray, mixture: GaussianMixture) -> Tuple[np.ndarray, float]:
     for i in range(n):
         # Decide positions with valid ratings
         valid = (X[i,:] > 0)
+        Cu = valid.sum()
         tiled_vector = np.tile(X[i,:], (K,1))
         
         # Compute f(u,j) for all j
-        post[i,:] = np.log(mixture.p) \
+        post[i,:] = np.log(mixture.p + 1e-16) \
                     - ((tiled_vector - mixture.mu)**2) @ valid / (2*mixture.var) \
-                    - (d/2) * np.log(2*np.pi*mixture.var)
+                    - (Cu/2) * np.log(2*np.pi*mixture.var)
     
     # Compute log posterior l(j|u) = f(u,j) - logsumexp(f(u,j))
     LL = logsumexp(post, axis=1, keepdims=True)

@@ -21,4 +21,4 @@ mixture, post = common.init(X, K, seed)
 mixture, post, LL = em.run(X, mixture, post)
 print(LL)
 
-common.plot(X, mixture, post, "K = %d" % K)
+#common.plot(X, mixture, post, "K = %d" % K)
