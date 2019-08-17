@@ -107,6 +107,7 @@ def run(X: np.ndarray, mixture: GaussianMixture,
         previous_LL = LL
         post, LL = estep(X, mixture)
         mixture = mstep(X, post, mixture)
+        #print(LL)
         
     return mixture, post, LL
 
@@ -121,4 +122,10 @@ def fill_matrix(X: np.ndarray, mixture: GaussianMixture) -> np.ndarray:
     Returns
         np.ndarray: a (n, d) array with completed data
     """
-    raise NotImplementedError
+    post, _ = estep(X, mixture)
+    pred_mean = post @ mixture.mu
+    
+    filled_matrix = X.copy()
+    filled_matrix[X == 0] = pred_mean[X == 0]
+    
+    return filled_matrix
