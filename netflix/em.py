@@ -19,7 +19,7 @@ def estep(X: np.ndarray, mixture: GaussianMixture) -> Tuple[np.ndarray, float]:
 
     """
     n, d = X.shape
-    _, K = mixture.mu.shape
+    K, _ = mixture.mu.shape
     post = np.zeros((n,K))
     
     for i in range(n):
@@ -37,6 +37,7 @@ def estep(X: np.ndarray, mixture: GaussianMixture) -> Tuple[np.ndarray, float]:
     post = post - LL
     # Remove log 
     post = np.exp(post)
+    LL = LL.sum()
     
     return post, LL
 
@@ -57,7 +58,30 @@ def mstep(X: np.ndarray, post: np.ndarray, mixture: GaussianMixture,
     Returns:
         GaussianMixture: the new gaussian mixture
     """
-    raise NotImplementedError
+    n, d = X.shape
+    _, K = post.shape
+    
+    p = post.sum(axis=0) / n
+    
+    mu = np.zeros((K, d))
+    var = np.zeros(K)
+    
+    # Valid ratings
+    valid = (X > 0)
+    Cu = valid.sum(axis=1)
+    
+    for k in range(K):
+        support = (post[:,k].reshape((-1,1)) * valid).sum(axis=0)
+        valid_ratings = X * valid
+        
+        mu[k,:] = post[:,k] @ valid_ratings / support
+        mu[k,:] = [x if support[j] >= 1 else mixture.mu[k,j] for j, x in enumerate(mu[k,:])]
+        
+        var[k] = (((X - mu[k,:]) * valid)**2).sum(axis=1) @ post[:,k] / (Cu @ post[:,k])
+        if (var[k] < min_variance):
+            var[k] = min_variance
+            
+    return GaussianMixture(mu, var, p)
 
 
 def run(X: np.ndarray, mixture: GaussianMixture,
@@ -75,7 +99,15 @@ def run(X: np.ndarray, mixture: GaussianMixture,
             for all components for all examples
         float: log-likelihood of the current assignment
     """
-    raise NotImplementedError
+    previous_LL = None
+    LL = None
+    
+    while (previous_LL is None or LL - previous_LL > 1e-6 * np.abs(LL)):
+        previous_LL = LL
+        post, LL = estep(X, mixture)
+        mixture = mstep(X, post, mixture)
+        
+    return mixture, post, LL
 
 
 def fill_matrix(X: np.ndarray, mixture: GaussianMixture) -> np.ndarray:
